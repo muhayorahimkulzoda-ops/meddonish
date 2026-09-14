@@ -12,6 +12,7 @@
   "dependencies": {
     "@meddonish/api-client": "workspace:*",
     "@meddonish/localization": "workspace:*",
+    "lucide-react": "^0.544.0",
     "next": "^15.5.2",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.1.1",

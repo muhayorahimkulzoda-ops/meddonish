@@ -8,6 +8,7 @@ import { Shell } from '../../../../components/Shell';
 import { LessonMemo } from '../../../../components/LessonMemo';
 import { LessonPdfViewer } from '../../../../components/LessonPdfViewer';
 import { LessonTestViewer } from '../../../../components/LessonTestViewer';
+import { writeContinueLesson } from '../../../../lib/continue-learning';
 
 type Lesson = {
   id: string;
@@ -68,6 +69,16 @@ export default function LearnLessonPage() {
   const notes = pick(lesson?.translations, locale, 'body');
   const test = lesson?.tests[0];
   const backHref = lesson?.course.slug ? `/courses/${lesson.course.slug}` : '/courses/anatomy-osteo';
+
+  useEffect(() => {
+    if (!lesson) return;
+    writeContinueLesson({
+      courseTitle: lesson.course.slug === 'anatomy-osteo' ? t('home.track.anatomy') : lesson.course.slug,
+      topicTitle: title || t('course.topics'),
+      href: `/learn/lessons/${lesson.id}`,
+      progress: 0,
+    });
+  }, [lesson, title]);
 
   async function openPdf() {
     if (!lesson) return;

@@ -12,6 +12,7 @@ import {
   welcomeWasSeen,
 } from '../lib/i18n';
 import { BrandMark } from './BrandMark';
+import { hydrateTheme } from '../lib/theme';
 
 type Step = 'boot' | 'language' | 'welcome' | 'app';
 
@@ -36,6 +37,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     hydrateLocale();
+    hydrateTheme();
     const params = new URLSearchParams(window.location.search);
     const pickLanguage = params.get('lang') === 'choose';
     if (pickLanguage) {

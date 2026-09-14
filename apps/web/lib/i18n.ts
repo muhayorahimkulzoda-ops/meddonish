@@ -53,7 +53,9 @@ export function clearWelcomeSeen() {
 
 export function subscribeLocale(listener: () => void) {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function t(key: MessageKey, vars?: Record<string, string | number>) {
