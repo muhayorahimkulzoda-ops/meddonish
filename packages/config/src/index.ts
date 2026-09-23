@@ -15,8 +15,8 @@ export const SETTING_KEYS = {
 } as const;
 
 export const STORAGE_KEYS = {
-  videoSource: (id: string) => `video/${id}/source/`,
-  videoHls: (id: string) => `video/${id}/hls/`,
-  videoDash: (id: string) => `video/${id}/dash/`,
-  videoThumb: (id: string) => `video/${id}/thumbnail/`,
+  videoSource: (id: string) => `premium-media/video/${id}/source/`,
+  videoHls: (id: string) => `premium-media/video/${id}/hls/`,
+  videoDash: (id: string) => `premium-media/video/${id}/dash/`,
+  videoThumb: (id: string) => `public-media/thumbs/${id}/`,
 } as const;

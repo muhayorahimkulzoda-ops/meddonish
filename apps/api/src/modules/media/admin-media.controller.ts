@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -16,12 +17,13 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { memoryStorage } from 'multer';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsString, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import type { Request } from 'express';
 import { CurrentAdmin } from '../../common/current-admin';
 import { AdminJwtGuard } from '../admin-auth/admin-jwt.guard';
 import type { AdminPayload } from '../admin-auth/admin-jwt.strategy';
 import { DocumentService } from './document.service';
+import { MediaLibraryService } from './media-library.service';
 import { MediaSessionService } from './session.service';
 import { VideoUploadService } from './video-upload.service';
 
@@ -35,6 +37,29 @@ class CreateVideoDto {
   byteSize: number;
 }
 
+class ExternalVideoDto {
+  @IsString()
+  externalUrl: string;
+
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  thumbnailUrl?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  durationSec?: number;
+
+  @IsOptional()
+  @IsString()
+  language?: 'ru' | 'tg' | 'en';
+}
+
 @ApiTags('admin-media')
 @ApiBearerAuth()
 @UseGuards(AdminJwtGuard)
@@ -44,6 +69,7 @@ export class AdminMediaController {
     private readonly videos: VideoUploadService,
     private readonly documents: DocumentService,
     private readonly sessions: MediaSessionService,
+    private readonly library: MediaLibraryService,
   ) {}
 
   @Post('lessons/:lessonId/videos')
@@ -54,6 +80,16 @@ export class AdminMediaController {
     @Req() req: Request,
   ) {
     return this.videos.create(admin.adminId, lessonId, body.originalName, body.byteSize, req.ip);
+  }
+
+  @Post('lessons/:lessonId/videos/external')
+  attachExternal(
+    @CurrentAdmin() admin: AdminPayload,
+    @Param('lessonId') lessonId: string,
+    @Body() body: ExternalVideoDto,
+    @Req() req: Request,
+  ) {
+    return this.videos.attachExternal(admin.adminId, lessonId, body, req.ip);
   }
 
   @SkipThrottle()
@@ -123,5 +159,37 @@ export class AdminMediaController {
   @Delete('documents/:id')
   removePdf(@CurrentAdmin() admin: AdminPayload, @Param('id') id: string, @Req() req: Request) {
     return this.documents.remove(admin.adminId, id, req.ip);
+  }
+
+  @Get('documents')
+  listDocuments() {
+    return this.documents.list();
+  }
+
+  @Get('media')
+  listMedia(@Query('q') q?: string) {
+    return this.library.list(q);
+  }
+
+  @Post('media')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 40 * 1024 * 1024 },
+    }),
+  )
+  uploadMedia(
+    @CurrentAdmin() admin: AdminPayload,
+    @UploadedFile() file: { buffer: Buffer; mimetype: string; size: number; originalname: string },
+    @Body('title') title: string,
+    @Req() req: Request,
+  ) {
+    return this.library.upload(admin.adminId, file, title, req.ip);
+  }
+
+  @Delete('media/:id')
+  removeMedia(@CurrentAdmin() admin: AdminPayload, @Param('id') id: string, @Req() req: Request) {
+    return this.library.remove(admin.adminId, id, req.ip);
   }
 }

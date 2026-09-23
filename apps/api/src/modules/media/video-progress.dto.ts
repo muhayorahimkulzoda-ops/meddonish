@@ -18,4 +18,10 @@ export class VideoProgressDto {
   @IsInt()
   @Min(0)
   durationSeconds?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  positionSeconds?: number;
 }

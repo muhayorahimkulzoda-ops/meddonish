@@ -58,13 +58,21 @@ export class PaymentsAdminController {
     @Req() req: Request,
   ) {
     const plan = await this.prisma.plan.findUniqueOrThrow({ where: { code: body.planCode } });
-    const granted = await this.entitlements.grantByPhone({
-      phone: body.phone,
-      courseId: body.courseId,
-      planId: plan.id,
-      source: body.source ?? AccessSource.admin,
-      days: body.days,
-    });
+    const granted = body.userId
+      ? await this.entitlements.grantForUser({
+          userId: body.userId,
+          courseId: body.courseId,
+          planId: plan.id,
+          source: body.source ?? AccessSource.admin,
+          days: body.days,
+        })
+      : await this.entitlements.grantByPhone({
+          phone: body.phone ?? '',
+          courseId: body.courseId,
+          planId: plan.id,
+          source: body.source ?? AccessSource.admin,
+          days: body.days,
+        });
     await this.audit.log({
       adminId: admin.adminId,
       action: 'grant',

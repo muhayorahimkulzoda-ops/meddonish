@@ -17,6 +17,7 @@ import { ClinicalModule } from './modules/clinical/clinical.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { AiModule } from './modules/ai/ai.module';
 import { AdminSystemModule } from './modules/settings/admin-system.module';
 import { JwtModule } from '@nestjs/jwt';
 import { CsrfInterceptor } from './modules/auth/csrf.interceptor';
@@ -37,6 +38,7 @@ import { CsrfInterceptor } from './modules/auth/csrf.interceptor';
     PaymentsModule,
     NotificationsModule,
     AnalyticsModule,
+    AiModule,
     AdminSystemModule,
     HealthModule,
   ],

@@ -37,6 +37,8 @@ export const Errors = {
     new AppException('ENTITLEMENT_INACTIVE', 'Access has expired', HttpStatus.FORBIDDEN),
   refreshInvalid: () =>
     new AppException('REFRESH_INVALID', 'Refresh token is invalid', HttpStatus.UNAUTHORIZED),
+  adminInvalid: () =>
+    new AppException('ADMIN_INVALID', 'Invalid admin credentials', HttpStatus.UNAUTHORIZED),
   totpRequired: () =>
     new AppException('TOTP_REQUIRED', 'Admin TOTP is required', HttpStatus.UNAUTHORIZED),
   totpInvalid: () =>

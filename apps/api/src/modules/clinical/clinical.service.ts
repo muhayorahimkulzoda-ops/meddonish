@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Readable } from 'node:stream';
 import { AppException } from '../../common/errors';
@@ -152,6 +153,16 @@ export class ClinicalService {
         differential: dto.differential,
         discussion: dto.discussion,
         conclusion: dto.conclusion,
+        status: dto.status ?? 'draft',
+        category: dto.category,
+        specialty: dto.specialty,
+        management: dto.management,
+        references: dto.references as object | undefined,
+        reviewerName: dto.reviewerName,
+        lastReviewedAt: dto.reviewerName ? new Date() : undefined,
+        publishedAt: dto.status === 'published' ? new Date() : undefined,
+        createdBy: adminId,
+        updatedBy: adminId,
         steps: dto.steps?.length
           ? {
               create: dto.steps.map((step, index) => ({
@@ -183,6 +194,15 @@ export class ClinicalService {
         differential: dto.differential,
         discussion: dto.discussion,
         conclusion: dto.conclusion,
+        status: dto.status,
+        category: dto.category,
+        specialty: dto.specialty,
+        management: dto.management,
+        references: dto.references as object | undefined,
+        reviewerName: dto.reviewerName,
+        lastReviewedAt: dto.reviewerName ? new Date() : undefined,
+        publishedAt: dto.status === 'published' ? new Date() : undefined,
+        updatedBy: adminId,
       },
     });
     if (dto.steps) {
@@ -239,8 +259,15 @@ export class ClinicalService {
             differential: item.differential,
             discussion: item.discussion,
             conclusion: item.conclusion,
+            management: item.management,
+            references: item.references,
           }
         : {}),
+      status: item.status,
+      category: item.category,
+      specialty: item.specialty,
+      lastReviewedAt: item.lastReviewedAt,
+      reviewerName: item.reviewerName,
     };
   }
 
@@ -294,6 +321,9 @@ export class ClinicalService {
 
   async assertCanViewCase(userId: string, caseId: string) {
     const item = await this.prisma.clinicalCase.findUniqueOrThrow({ where: { id: caseId } });
+    if (item.status !== 'published') {
+      throw new AppException('CASE_UNPUBLISHED', 'Clinical case is not published', HttpStatus.NOT_FOUND);
+    }
     await this.access.assertCanViewLesson(userId, item.lessonId);
     return item;
   }
@@ -302,7 +332,7 @@ export class ClinicalService {
     return Promise.all([
       this.prisma.situationalTask.findMany({ where: { lessonId } }),
       this.prisma.clinicalCase.findMany({
-        where: { lessonId },
+        where: { lessonId, status: 'published' },
         include: { _count: { select: { steps: true, media: true } } },
       }),
     ]).then(([tasks, cases]) => ({

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { VideoStatus } from '@prisma/client';
+import { Language, VideoStatus } from '@prisma/client';
 import { AppException } from '../../common/errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../admin-cms/audit.service';
@@ -24,6 +24,10 @@ export class VideoUploadService {
     lessonId: string;
     status: VideoStatus;
     originalName: string | null;
+    title?: string | null;
+    externalUrl?: string | null;
+    thumbnailUrl?: string | null;
+    language?: string | null;
     byteSize: bigint;
     uploadedBytes: bigint;
     durationSec: number | null;
@@ -35,6 +39,10 @@ export class VideoUploadService {
       lessonId: video.lessonId,
       status: video.status,
       originalName: video.originalName,
+      title: video.title ?? video.originalName,
+      externalUrl: video.externalUrl ?? null,
+      thumbnailUrl: video.thumbnailUrl ?? null,
+      language: video.language ?? null,
       byteSize: Number(video.byteSize),
       uploadedBytes: Number(video.uploadedBytes),
       durationSec: video.durationSec,
@@ -48,7 +56,7 @@ export class VideoUploadService {
   }
 
   async create(adminId: string, lessonId: string, originalName: string, byteSize: number, ip?: string) {
-    if (!/\.(mp4|webm|mov)$/i.test(originalName)) {
+    if (!/\.(mp4|webm|mov|m4v)$/i.test(originalName)) {
       throw new AppException('VIDEO_TYPE', 'Only MP4, WebM and MOV are allowed');
     }
     await this.prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
@@ -106,6 +114,10 @@ export class VideoUploadService {
         errorMessage: null,
       },
     });
+    await this.prisma.contentItem.updateMany({
+      where: { entityId: videoId, contentType: 'video' },
+      data: { storagePath: sourceKey, storageBucket: 'premium-media' },
+    });
     await this.prisma.videoVariant.deleteMany({ where: { videoId } });
     await this.prisma.videoVariant.create({
       data: {
@@ -136,6 +148,42 @@ export class VideoUploadService {
       ip,
     });
     return { ok: true };
+  }
+
+  async attachExternal(
+    adminId: string,
+    lessonId: string,
+    input: {
+      title?: string;
+      externalUrl: string;
+      thumbnailUrl?: string;
+      durationSec?: number;
+      language?: 'ru' | 'tg' | 'en';
+    },
+    ip?: string,
+  ) {
+    await this.prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
+    const video = await this.prisma.video.create({
+      data: {
+        lessonId,
+        status: VideoStatus.READY,
+        title: input.title,
+        externalUrl: input.externalUrl,
+        thumbnailUrl: input.thumbnailUrl,
+        durationSec: input.durationSec,
+        language: input.language as Language | undefined,
+        originalName: input.title ?? 'external',
+      },
+      include: { variants: true },
+    });
+    await this.audit.log({
+      adminId,
+      action: 'create',
+      entity: 'video_external',
+      entityId: video.id,
+      ip,
+    });
+    return this.serialize(video);
   }
 
   get(videoId: string) {

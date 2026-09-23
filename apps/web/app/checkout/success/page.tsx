@@ -39,7 +39,7 @@ function SuccessBody() {
       <section className="hero">
         <h1>{ready ? translate(locale, 'payment.success') : translate(locale, 'payment.waiting')}</h1>
         <p>{order?.isYear3Bundle ? translate(locale, 'offer.year3.title') : order?.course.title}</p>
-        {ready ? <a className="button" href="/#year3">{translate(locale, 'subscriber.continue')}</a> : null}
+        {ready ? <a className="button" href="/courses">{translate(locale, 'subscriber.continue')}</a> : null}
       </section>
     </div>
   );

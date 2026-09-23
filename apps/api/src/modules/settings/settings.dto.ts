@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
 export class UpdateSettingsDto {
   @IsOptional()
@@ -52,6 +52,16 @@ export class UpdateSettingsDto {
   @Min(5)
   @Max(120)
   seconds_per_question?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(400)
+  @Matches(/^$|^https?:\/\/(t\.me|telegram\.me)\/.+/i)
+  telegram_contact_url?: string;
+
+  @IsOptional()
+  @IsIn(['manual_telegram', 'web_payment'])
+  commerce_channel?: 'manual_telegram' | 'web_payment';
 }
 
 export class TotpCodeDto {

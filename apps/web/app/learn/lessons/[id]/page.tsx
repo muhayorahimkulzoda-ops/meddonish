@@ -14,11 +14,19 @@ type Lesson = {
   id: string;
   translations: { language: string; title: string; body?: string | null }[];
   tests: { id: string; title: string }[];
+  documents?: { id: string; title: string; kind: string }[];
   course: { id: string; slug: string };
   hasPdf?: boolean;
   hasVideo?: boolean;
   videoId?: string | null;
   topicTitle?: string;
+};
+
+type SubscriberLesson = {
+  id: string;
+  tests: { id: string; title: string }[];
+  documents: { id: string; title: string; kind?: string }[];
+  videos: { id: string }[];
 };
 
 function pick(
@@ -34,6 +42,18 @@ function pick(
   return (hit?.[field] ?? '') as string;
 }
 
+async function firstOk<T>(jobs: Array<() => Promise<T>>): Promise<T> {
+  let last: Error | null = null;
+  for (const job of jobs) {
+    try {
+      return await job();
+    } catch (err) {
+      last = err instanceof Error ? err : new Error('Error');
+    }
+  }
+  throw last ?? new Error('Error');
+}
+
 export default function LearnLessonPage() {
   const params = useParams<{ id: string }>();
   const locale = useLocale();
@@ -45,17 +65,35 @@ export default function LearnLessonPage() {
   const [videoSrc, setVideoSrc] = useState('');
 
   useEffect(() => {
-    api<Lesson>(`/public/lessons/${params.id}`)
-      .then(setLesson)
-      .catch((err: Error) => setError(err.message));
-  }, [params.id]);
-
-  useEffect(() => {
-    if (!lesson) return;
     let cancelled = false;
-    api<{ playbackUrl: string }>(`/public/lessons/${lesson.id}/playback-session`, { method: 'POST' })
-      .then((session) => {
-        if (!cancelled) setVideoSrc(mediaUrl(session.playbackUrl));
+    setVideoSrc('');
+    setError('');
+    api<Lesson>(`/public/lessons/${params.id}`)
+      .then(async (row) => {
+        if (cancelled) return;
+        setLesson(row);
+        try {
+          const privateLesson = await api<SubscriberLesson>(`/lessons/${row.id}`);
+          if (cancelled) return;
+          setLesson({
+            ...row,
+            tests: privateLesson.tests.length ? privateLesson.tests : row.tests,
+            hasPdf: privateLesson.documents.some((item) => item.kind !== 'presentation') || row.hasPdf,
+            hasVideo: privateLesson.videos.length > 0 || row.hasVideo,
+            videoId: privateLesson.videos[0]?.id ?? row.videoId,
+          });
+        } catch {
+          /* guest */
+        }
+        try {
+          const session = await firstOk([
+            () => api<{ playbackUrl: string }>(`/lessons/${row.id}/playback-session`, { method: 'POST' }),
+            () => api<{ playbackUrl: string }>(`/public/lessons/${row.id}/playback-session`, { method: 'POST' }),
+          ]);
+          if (!cancelled) setVideoSrc(mediaUrl(session.playbackUrl));
+        } catch (err) {
+          if (!cancelled) setError(err instanceof Error ? err.message : t('admin.empty'));
+        }
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message);
@@ -63,7 +101,7 @@ export default function LearnLessonPage() {
     return () => {
       cancelled = true;
     };
-  }, [lesson]);
+  }, [params.id]);
 
   const title = lesson?.topicTitle || pick(lesson?.translations, locale);
   const notes = pick(lesson?.translations, locale, 'body');
@@ -83,20 +121,21 @@ export default function LearnLessonPage() {
   async function openPdf() {
     if (!lesson) return;
     setError('');
-    if (lesson.hasPdf) {
-      try {
-        const session = await api<{ viewUrl: string }>(`/public/lessons/${lesson.id}/notes-session`, {
-          method: 'POST',
-        });
-        setPdfUrl(mediaUrl(session.viewUrl));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error');
+    try {
+      const session = await firstOk([
+        () => api<{ viewUrl: string }>(`/lessons/${lesson.id}/notes-session`, { method: 'POST' }),
+        () => api<{ viewUrl: string }>(`/public/lessons/${lesson.id}/notes-session`, { method: 'POST' }),
+      ]);
+      setPdfUrl(mediaUrl(session.viewUrl));
+      setShowPdf(true);
+    } catch (err) {
+      if (notes) {
+        setPdfUrl('');
+        setShowPdf(true);
         return;
       }
-    } else {
-      setPdfUrl('');
+      setError(err instanceof Error ? err.message : t('admin.empty'));
     }
-    setShowPdf(true);
   }
 
   function openTest() {
@@ -120,11 +159,6 @@ export default function LearnLessonPage() {
             playsInline
             preload="auto"
             src={videoSrc}
-            onError={() => {
-              if (videoSrc.includes(':3000/')) {
-                setVideoSrc(videoSrc.replace(/https?:\/\/[^/]+:3000/, ''));
-              }
-            }}
           />
         ) : (
           <div className="player" />

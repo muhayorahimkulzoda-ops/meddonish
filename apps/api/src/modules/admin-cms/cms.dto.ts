@@ -113,6 +113,16 @@ export class CreateCourseDto {
   @IsEnum(PublishStatus)
   status?: PublishStatus;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  level?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  durationMin?: number;
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
@@ -148,6 +158,16 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsEnum(PublishStatus)
   status?: PublishStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  level?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  durationMin?: number;
 
   @IsOptional()
   @IsArray()
@@ -268,4 +288,11 @@ export class ReplaceLessonTimecodesDto {
   @ValidateNested({ each: true })
   @Type(() => LessonTimecodeItemDto)
   items: LessonTimecodeItemDto[];
+}
+
+export class ReorderIdsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID('4', { each: true })
+  ids: string[];
 }

@@ -73,7 +73,7 @@ async function main() {
   }
 
   const email = process.env.ADMIN_BOOTSTRAP_EMAIL ?? 'admin@meddonish.local';
-  const password = process.env.ADMIN_BOOTSTRAP_PASSWORD ?? 'ChangeMe_Admin1';
+  const password = process.env.ADMIN_BOOTSTRAP_PASSWORD ?? 'MeddonishAdmin2026';
   const passwordHash = await hash(password, 12);
   const admin = await prisma.adminAccount.upsert({
     where: { email },

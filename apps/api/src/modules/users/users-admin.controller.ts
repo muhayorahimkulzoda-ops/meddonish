@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UserStatus } from '@prisma/client';
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import type { Request } from 'express';
 import { CurrentAdmin } from '../../common/current-admin';
 import { AdminJwtGuard } from '../admin-auth/admin-jwt.guard';
@@ -11,6 +11,22 @@ import { UsersAdminService } from './users-admin.service';
 class PatchUserDto {
   @IsEnum(UserStatus)
   status: UserStatus;
+}
+
+class PatchUserProfileDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  lastName?: string;
+
+  @IsOptional()
+  @IsString()
+  appRole?: string;
 }
 
 @ApiTags('admin-users')
@@ -23,6 +39,11 @@ export class UsersAdminController {
   @Get()
   list(@Query('q') q?: string, @Query('take') take?: string) {
     return this.users.list(q, take ? Number(take) : 2000);
+  }
+
+  @Get('staff')
+  staff() {
+    return this.users.listStaff();
   }
 
   @Get(':id')
@@ -38,6 +59,16 @@ export class UsersAdminController {
     @Req() req: Request,
   ) {
     return this.users.setStatus(admin.adminId, id, body.status, req.ip);
+  }
+
+  @Patch(':id/profile')
+  patchProfile(
+    @CurrentAdmin() admin: AdminPayload,
+    @Param('id') id: string,
+    @Body() body: PatchUserProfileDto,
+    @Req() req: Request,
+  ) {
+    return this.users.updateProfile(admin.adminId, id, body, req.ip);
   }
 
   @Post(':id/release-device')

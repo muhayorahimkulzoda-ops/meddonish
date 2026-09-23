@@ -64,13 +64,6 @@ export class TestingController {
   }
 
   private async assertCanStart(userId: string, testId: string) {
-    const test = await this.prisma.test.findUniqueOrThrow({ where: { id: testId } });
-    if (test.lessonId) {
-      await this.access.assertCanViewLesson(userId, test.lessonId);
-      return;
-    }
-    if (test.courseId) {
-      await this.entitlements.assertActive(userId, test.courseId);
-    }
+    await this.access.assertCanTakeTest(userId, testId);
   }
 }

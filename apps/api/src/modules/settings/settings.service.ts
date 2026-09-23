@@ -13,6 +13,8 @@ export const SETTING_KEYS = {
   singleDevicePolicy: 'single_device_policy',
   defaultQuestionCount: 'default_question_count',
   secondsPerQuestion: 'seconds_per_question',
+  telegramContactUrl: 'telegram_contact_url',
+  commerceChannel: 'commerce_channel',
 } as const;
 
 export const SETTING_DEFAULTS: Record<string, number | string> = {
@@ -25,6 +27,8 @@ export const SETTING_DEFAULTS: Record<string, number | string> = {
   [SETTING_KEYS.singleDevicePolicy]: 'require_release',
   [SETTING_KEYS.defaultQuestionCount]: 30,
   [SETTING_KEYS.secondsPerQuestion]: 20,
+  [SETTING_KEYS.telegramContactUrl]: '',
+  [SETTING_KEYS.commerceChannel]: 'manual_telegram',
 };
 
 const ALLOWED = new Set(Object.values(SETTING_KEYS));

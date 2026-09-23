@@ -107,6 +107,33 @@ export default function SignInPage() {
         <div className="login-page">
           <div className="login-frame">
             <div className="login-card">
+              <button
+                type="button"
+                className="login-back"
+                aria-label={t('welcome.back')}
+                onClick={() => {
+                  try {
+                    const from = document.referrer ? new URL(document.referrer) : null;
+                    if (from && from.origin === window.location.origin && from.pathname !== window.location.pathname) {
+                      router.back();
+                      return;
+                    }
+                  } catch {
+                    /* home */
+                  }
+                  router.push('/');
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+                  <path
+                    d="M15 18l-6-6 6-6"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
               <p className="gate-kicker">
                 <BrandMark />
               </p>

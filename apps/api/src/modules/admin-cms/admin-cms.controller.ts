@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -22,6 +23,7 @@ import {
   CreateLessonDto,
   CreateSectionDto,
   ReplaceLessonTimecodesDto,
+  ReorderIdsDto,
   UpdateCourseDto,
   UpdateDisciplineDto,
   UpdateLessonDto,
@@ -33,7 +35,11 @@ import {
 @UseGuards(AdminJwtGuard)
 @Controller('admin')
 export class AdminCmsController {
-  constructor(private readonly cms: CatalogAdminService) {}
+  private readonly cms: CatalogAdminService;
+
+  constructor(@Inject(CatalogAdminService) cms: CatalogAdminService) {
+    this.cms = cms;
+  }
 
   @Get('me')
   me(@CurrentAdmin() admin: AdminPayload) {
@@ -43,6 +49,21 @@ export class AdminCmsController {
   @Get('dashboard')
   dashboard() {
     return this.cms.dashboard();
+  }
+
+  @Get('search')
+  search(@Req() req: Request) {
+    return this.cms.search(String(req.query.q ?? ''));
+  }
+
+  @Get('topics')
+  listTopics() {
+    return this.cms.listTopics();
+  }
+
+  @Get('videos')
+  listVideos() {
+    return this.cms.listVideos();
   }
 
   @Get('disciplines')
@@ -96,6 +117,44 @@ export class AdminCmsController {
     @Req() req: Request,
   ) {
     return this.cms.updateCourse(admin.adminId, id, body, req.ip);
+  }
+
+  @Patch('courses/:id/archive')
+  archiveCourse(
+    @CurrentAdmin() admin: AdminPayload,
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    return this.cms.archiveCourse(admin.adminId, id, req.ip);
+  }
+
+  @Delete('courses/:id')
+  deleteCourse(
+    @CurrentAdmin() admin: AdminPayload,
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    return this.cms.deleteCourse(admin.adminId, id, req.ip);
+  }
+
+  @Put('courses/:courseId/sections/order')
+  reorderSections(
+    @CurrentAdmin() admin: AdminPayload,
+    @Param('courseId') courseId: string,
+    @Body() body: ReorderIdsDto,
+    @Req() req: Request,
+  ) {
+    return this.cms.reorderSections(admin.adminId, courseId, body.ids, req.ip);
+  }
+
+  @Put('sections/:sectionId/lessons/order')
+  reorderLessons(
+    @CurrentAdmin() admin: AdminPayload,
+    @Param('sectionId') sectionId: string,
+    @Body() body: ReorderIdsDto,
+    @Req() req: Request,
+  ) {
+    return this.cms.reorderLessons(admin.adminId, sectionId, body.ids, req.ip);
   }
 
   @Post('courses/:courseId/sections')

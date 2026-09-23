@@ -8,6 +8,7 @@ export interface MediaTokenPayload {
   id: string;
   exp: number;
   sub: string;
+  preview?: boolean;
 }
 
 @Injectable()
@@ -16,12 +17,13 @@ export class MediaTokenService {
     return process.env.MEDIA_SIGNING_SECRET ?? process.env.JWT_ACCESS_SECRET ?? 'dev-change-me-media';
   }
 
-  issue(kind: MediaKind, id: string, subject: string, ttlSeconds = 120) {
+  issue(kind: MediaKind, id: string, subject: string, ttlSeconds = 120, preview = false) {
     const payload: MediaTokenPayload = {
       kind,
       id,
       sub: subject,
       exp: Math.floor(Date.now() / 1000) + ttlSeconds,
+      preview: preview || undefined,
     };
     const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
     const signature = createHmac('sha256', this.secret()).update(body).digest('base64url');

@@ -72,4 +72,21 @@ export class DocumentService {
     });
     return { ok: true };
   }
+
+  list() {
+    return this.prisma.document.findMany({
+      include: { lessons: { include: { lesson: { include: { translations: true } } } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    }).then((rows) =>
+      rows.map((document) => ({
+        ...this.serialize(document),
+        createdAt: document.createdAt,
+        lessons: document.lessons.map((row) => ({
+          lessonId: row.lessonId,
+          title: row.lesson.translations[0]?.title,
+        })),
+      })),
+    );
+  }
 }

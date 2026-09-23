@@ -11,13 +11,13 @@ export class MediaSessionService {
     private readonly tokens: MediaTokenService,
   ) {}
 
-  async playback(videoId: string, subject: string, deviceRecordId?: string) {
+  async playback(videoId: string, subject: string, deviceRecordId?: string, preview = false) {
     const video = await this.prisma.video.findUniqueOrThrow({
       where: { id: videoId },
       include: { variants: true },
     });
-    const ttl = 3600;
-    const token = this.tokens.issue('video', videoId, subject, ttl);
+    const ttl = preview ? 600 : 3600;
+    const token = this.tokens.issue('video', videoId, subject, ttl, preview);
     if (deviceRecordId) {
       await this.prisma.videoPlaybackSession.create({
         data: {
@@ -47,6 +47,7 @@ export class MediaSessionService {
       dashUrl: dashDelivery?.url ?? null,
       cdn: playback.cdn,
       drm,
+      preview,
       watermark: { text: `MEDdonish\nID: ${subject.slice(0, 8)}` },
     };
   }

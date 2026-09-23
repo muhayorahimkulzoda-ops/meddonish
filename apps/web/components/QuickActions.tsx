@@ -19,7 +19,7 @@ const ACTIONS: { href: string; titleKey: MessageKey; icon: typeof Bone }[] = [
   { href: '/anatomy', titleKey: 'qa.anatomy', icon: Bone },
   { href: '/courses/anatomy-osteo', titleKey: 'qa.lectures', icon: BookOpen },
   { href: '/courses/anatomy-osteo', titleKey: 'qa.video', icon: PlayCircle },
-  { href: '/#year3', titleKey: 'qa.tests', icon: FileQuestion },
+  { href: '/courses', titleKey: 'qa.tests', icon: FileQuestion },
   { href: '/clinical#drugs', titleKey: 'qa.drugs', icon: Pill },
   { href: '/clinical#calculators', titleKey: 'qa.calculators', icon: Calculator },
   { href: '/clinical#cases', titleKey: 'qa.cases', icon: ClipboardList },

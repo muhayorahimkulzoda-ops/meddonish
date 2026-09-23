@@ -29,10 +29,10 @@ export function AppHeader({
       </a>
       <nav className="md-nav" aria-label={t('nav.home')}>
         <a href="/">{t('nav.home')}</a>
-        <a href="/#year3">{t('nav.learn')}</a>
+        <a href="/courses">{t('nav.learn')}</a>
         <a href="/anatomy">{t('nav.anatomy')}</a>
         <a href="/clinical">{t('nav.clinical')}</a>
-        <a href="/#year3">{t('nav.tests')}</a>
+        <a href="/courses">{t('nav.tests')}</a>
         <a href="/library">{t('nav.library')}</a>
       </nav>
       <div className="md-header-tools">

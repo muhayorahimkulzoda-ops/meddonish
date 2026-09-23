@@ -115,7 +115,7 @@ export default function LearnTestPage() {
 
   return (
     <Shell>
-      <a href="/#year3">{t('nav.courses')}</a>
+      <a href="/courses">{t('nav.courses')}</a>
       {error ? <p className="error">{error}</p> : null}
       {result ? (
         <section className="hero">

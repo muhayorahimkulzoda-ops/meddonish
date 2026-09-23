@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { captureAdminGateFromUrl, fetchMe, getAdminOrigin, hasAdminGate, logoutSession } from '../lib/api';
-import { t, useLocale } from '../lib/i18n';
+import { useLocale } from '../lib/i18n';
 import { hydrateTheme } from '../lib/theme';
 import { AppHeader } from './AppHeader';
 import { MobileBottomNav } from './MobileBottomNav';
@@ -39,7 +39,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/register') ||
     pathname.startsWith('/signin') ||
     pathname.startsWith('/forgot');
-  const hideFooter = isAuth || pathname.startsWith('/offer');
 
   return (
     <div className={isAuth ? 'shell shell-auth' : 'shell shell-app'} lang={locale}>
@@ -57,13 +56,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
         />
       )}
       {children}
-      {hideFooter ? null : (
-        <footer className="footer md-footer">
-          <a href="/privacy">{t('legal.privacy')}</a>
-          <a href="/terms">{t('legal.terms')}</a>
-          <a href="/account-deletion">{t('legal.accountDeletion')}</a>
-        </footer>
-      )}
       {isAuth ? null : <MobileBottomNav loggedIn={loggedIn} hash={hash} />}
     </div>
   );

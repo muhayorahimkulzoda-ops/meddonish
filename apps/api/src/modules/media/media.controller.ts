@@ -25,9 +25,9 @@ export class MediaController {
       where: { id: payload.id },
       include: { variants: true },
     });
-    const key =
-      this.playbackKey(video.variants, video.sourceKey) ??
-      (await this.existingSource(video.id));
+    const key = payload.preview
+      ? video.previewSourceKey ?? this.storage.previewKey(video.id)
+      : this.playbackKey(video.variants, video.sourceKey) ?? (await this.existingSource(video.id));
     if (!key) throw new AppException('VIDEO_NOT_READY', 'Video is not available');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -124,10 +124,15 @@ export class MediaController {
   }
 
   private async packagedFile(videoId: string, file: string) {
-    const hls = `video/${videoId}/hls/${file}`;
-    if (await this.storage.exists(hls)) return hls;
-    const dash = `video/${videoId}/dash/${file}`;
-    if (await this.storage.exists(dash)) return dash;
+    const keys = [
+      this.storage.hlsKey(videoId, file),
+      `video/${videoId}/hls/${file}`,
+      `premium-media/video/${videoId}/dash/${file}`,
+      `video/${videoId}/dash/${file}`,
+    ];
+    for (const key of keys) {
+      if (await this.storage.exists(key)) return key;
+    }
     return null;
   }
 
@@ -139,10 +144,15 @@ export class MediaController {
   }
 
   private async existingSource(videoId: string) {
-    const source = this.storage.sourceKey(videoId);
-    if (await this.storage.exists(source)) return source;
-    const temp = this.storage.tempKey(videoId);
-    if (await this.storage.exists(temp)) return temp;
+    const candidates = [
+      this.storage.sourceKey(videoId),
+      `video/${videoId}/source/original`,
+      this.storage.tempKey(videoId),
+      `video/${videoId}/source/.partial`,
+    ];
+    for (const key of candidates) {
+      if (await this.storage.exists(key)) return key;
+    }
     return null;
   }
 

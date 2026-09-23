@@ -18,6 +18,6 @@ export const SEARCH_INDEX: SearchItem[] = [
   { href: '/clinical#calculators', titleKey: 'clinical.calculators', group: 'clinical' },
   { href: '/clinical#guidelines', titleKey: 'clinical.guidelines', group: 'clinical' },
   { href: '/clinical#ddx', titleKey: 'clinical.ddx', group: 'clinical' },
-  { href: '/#year3', titleKey: 'nav.tests', group: 'test' },
+  { href: '/courses', titleKey: 'nav.tests', group: 'test' },
   { href: '/ai', titleKey: 'ai.title', group: 'ai' },
 ];

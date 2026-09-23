@@ -50,7 +50,7 @@ export default function LearnTaskPage() {
 
   return (
     <Shell>
-      <a href="/#year3">{t('nav.courses')}</a>
+      <a href="/courses">{t('nav.courses')}</a>
       {error ? <p className="error">{error}</p> : null}
       {task ? (
         <>

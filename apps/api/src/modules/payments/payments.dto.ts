@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
 import { AccessSource, EntitlementStatus, PaymentSource, PaymentStatus } from '@prisma/client';
 
 export class CreateOrderDto {
@@ -57,8 +57,13 @@ export class ProviderWebhookDto {
 }
 
 export class AdminGrantDto {
+  @ValidateIf((body: AdminGrantDto) => !body.userId)
   @Matches(/^\+[1-9]\d{7,14}$/)
-  phone: string;
+  phone?: string;
+
+  @ValidateIf((body: AdminGrantDto) => !body.phone)
+  @IsUUID()
+  userId?: string;
 
   @IsUUID()
   courseId: string;

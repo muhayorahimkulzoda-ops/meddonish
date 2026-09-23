@@ -41,9 +41,18 @@ type ApiError = Error & { code?: string; status?: number };
 let refreshInFlight: Promise<boolean> | null = null;
 
 export function mediaUrl(path: string) {
-  if (path.startsWith('http')) return path;
-  const host = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
-  return `http://${host}:3000${path.startsWith('/') ? path : `/${path}`}`;
+  if (!path) return path;
+  if (path.startsWith('/api/v1/')) return path;
+  if (path.startsWith('http')) {
+    try {
+      const parsed = new URL(path);
+      if (parsed.pathname.startsWith('/api/v1/')) return `${parsed.pathname}${parsed.search}`;
+    } catch {
+      return path;
+    }
+    return path;
+  }
+  return path.startsWith('/') ? path : `/${path}`;
 }
 
 export function getDeviceId() {

@@ -113,7 +113,7 @@ body::after {
   align-items: center;
   gap: var(--space-6);
   padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 0;
 }
 
 .md-brand {
@@ -341,6 +341,11 @@ body::after {
   gap: var(--space-3);
 }
 
+.md-course-grid-one {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 420px;
+}
+
 .md-cat-card,
 .md-course-card,
 .md-continue,
@@ -468,6 +473,28 @@ html[data-theme='dark'] .md-cat-icon {
 .md-ai-form {
   display: grid;
   gap: var(--space-4);
+}
+
+.md-ai-thread {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 20px;
+}
+
+.md-ai-msg {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  white-space: pre-wrap;
+}
+
+.md-ai-msg p {
+  margin: 0;
+}
+
+.md-ai-msg.is-user {
+  background: color-mix(in srgb, var(--md-blue) 10%, var(--card));
 }
 
 .md-ai-form textarea,
@@ -725,6 +752,10 @@ html[data-theme='dark'] .locale-switch button.active {
   .md-quick-grid,
   .md-course-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .md-course-grid-one {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .md-continue {

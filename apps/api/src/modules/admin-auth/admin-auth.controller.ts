@@ -1,26 +1,16 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Inject, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 import { AdminAuthService } from './admin-auth.service';
-
-class AdminLoginDto {
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  @MinLength(8)
-  password: string;
-
-  @IsOptional()
-  @IsString()
-  @Matches(/^\d{6}$/)
-  totp?: string;
-}
+import { AdminLoginDto } from './admin-login.dto';
 
 @ApiTags('admin-auth')
 @Controller('admin/auth')
 export class AdminAuthController {
-  constructor(private readonly adminAuth: AdminAuthService) {}
+  private readonly adminAuth: AdminAuthService;
+
+  constructor(@Inject(AdminAuthService) adminAuth: AdminAuthService) {
+    this.adminAuth = adminAuth;
+  }
 
   @Post('login')
   login(@Body() body: AdminLoginDto) {

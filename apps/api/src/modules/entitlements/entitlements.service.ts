@@ -140,6 +140,45 @@ export class EntitlementsService {
     });
   }
 
+  async grantForUser(params: {
+    userId: string;
+    courseId: string;
+    planId: string;
+    source: AccessSource;
+    days?: number;
+  }) {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: params.userId } });
+    const plan = await this.prisma.plan.findUniqueOrThrow({ where: { id: params.planId } });
+    const startedAt = new Date();
+    const days = params.days ?? plan.durationDays;
+    const expiresAt = new Date(startedAt.getTime() + days * 86_400_000);
+    await this.prisma.subscription.create({
+      data: {
+        userId: user.id,
+        courseId: params.courseId,
+        planId: params.planId,
+        source: params.source,
+        startsAt: startedAt,
+        expiresAt,
+        status: 'active',
+      },
+    });
+    const courseIds = await this.courseIdsForPaidAccess(params.courseId);
+    let last = null;
+    for (const courseId of courseIds) {
+      last = await this.grant({
+        userId: user.id,
+        courseId,
+        planId: params.planId,
+        source: params.source,
+        startedAt,
+        expiresAt,
+      });
+    }
+    if (!last) throw Errors.entitlementInactive();
+    return last;
+  }
+
   async grantByPhone(params: {
     phone: string;
     courseId: string;

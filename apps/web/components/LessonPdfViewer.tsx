@@ -55,7 +55,7 @@ function PdfFrame({ url }: { url: string }) {
       try {
         let blob: Blob | null = null;
         for (const href of loadUrls(url)) {
-          const response = await fetch(href);
+          const response = await fetch(href, { credentials: 'include' });
           if (response.ok) {
             blob = await response.blob();
             break;

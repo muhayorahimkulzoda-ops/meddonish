@@ -1,6 +1,7 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Errors } from '../../common/errors';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface AdminJwt {
@@ -15,7 +16,9 @@ export interface AdminPayload {
 
 @Injectable()
 export class AdminJwtStrategy extends PassportStrategy(Strategy, 'admin-jwt') {
-  constructor(private readonly prisma: PrismaService) {
+  private readonly prisma: PrismaService;
+
+  constructor(@Inject(PrismaService) prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: process.env.JWT_ADMIN_ACCESS_SECRET ?? 'dev-change-me-admin-access',
@@ -23,15 +26,16 @@ export class AdminJwtStrategy extends PassportStrategy(Strategy, 'admin-jwt') {
       audience: 'meddonish-admin',
       algorithms: ['HS256'],
     });
+    this.prisma = prisma;
   }
 
   async validate(payload: AdminJwt): Promise<AdminPayload> {
     if (payload.tokenType !== 'admin') {
-      throw new UnauthorizedException({ code: 'ADMIN_INVALID', message: 'Invalid admin token' });
+      throw Errors.adminInvalid();
     }
     const admin = await this.prisma.adminAccount.findUnique({ where: { id: payload.sub } });
     if (!admin || !admin.isActive) {
-      throw new UnauthorizedException({ code: 'ADMIN_INVALID', message: 'Admin is not active' });
+      throw Errors.adminInvalid();
     }
     return { adminId: admin.id, email: admin.email };
   }

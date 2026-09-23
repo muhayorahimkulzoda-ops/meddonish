@@ -3,6 +3,7 @@ import {
   Allow,
   ArrayMinSize,
   IsArray,
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -12,6 +13,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { PublishStatus } from '@prisma/client';
 
 export class SimpleCaseQuestionDto {
   @IsString()
@@ -142,6 +144,35 @@ export class CreateClinicalCaseDto {
   conclusion?: string;
 
   @IsOptional()
+  @IsEnum(PublishStatus)
+  status?: PublishStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  category?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  specialty?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8000)
+  management?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  reviewerName?: string;
+
+  @IsOptional()
+  @IsArray()
+  @Allow()
+  references?: unknown;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ClinicalStepDto)
@@ -210,6 +241,35 @@ export class UpdateClinicalCaseDto {
   @IsString()
   @MaxLength(4000)
   conclusion?: string;
+
+  @IsOptional()
+  @IsEnum(PublishStatus)
+  status?: PublishStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  category?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  specialty?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8000)
+  management?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  reviewerName?: string;
+
+  @IsOptional()
+  @IsArray()
+  @Allow()
+  references?: unknown;
 
   @IsOptional()
   @IsArray()

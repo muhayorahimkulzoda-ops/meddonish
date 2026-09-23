@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Language, Prisma, PublishStatus } from '@prisma/client';
 import { AppException } from '../../common/errors';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -44,11 +44,19 @@ const courseInclude = {
 
 @Injectable()
 export class CatalogAdminService {
+  private readonly prisma: PrismaService;
+  private readonly audit: AuditService;
+  private readonly notifications: NotificationsService;
+
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly audit: AuditService,
-    private readonly notifications: NotificationsService,
-  ) {}
+    @Inject(PrismaService) prisma: PrismaService,
+    @Inject(AuditService) audit: AuditService,
+    @Inject(NotificationsService) notifications: NotificationsService,
+  ) {
+    this.prisma = prisma;
+    this.audit = audit;
+    this.notifications = notifications;
+  }
 
   dashboard() {
     const now = new Date();
@@ -72,6 +80,34 @@ export class CatalogAdminService {
       }),
       this.prisma.question.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
       this.prisma.securityEvent.count(),
+      this.prisma.video.count(),
+      this.prisma.test.count(),
+      this.prisma.course.count({ where: { status: PublishStatus.draft } }),
+      this.prisma.course.count({ where: { status: PublishStatus.published } }),
+      this.prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          createdAt: true,
+          lastLoginAt: true,
+          profile: { select: { displayName: true, firstName: true, lastName: true, appRole: true } },
+        },
+      }),
+      this.prisma.course.findMany({
+        orderBy: { updatedAt: 'desc' },
+        take: 8,
+        select: { id: true, status: true, updatedAt: true, translations: true },
+      }),
+      this.prisma.auditLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 12,
+        select: { id: true, action: true, entity: true, entityId: true, createdAt: true },
+      }),
+      this.prisma.entitlement.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+      this.prisma.testAttempt.count({ where: { finishedAt: { not: null } } }),
     ]).then(([
       users,
       activeUsers,
@@ -87,6 +123,15 @@ export class CatalogAdminService {
       expiringIn7Days,
       newQuestions,
       suspiciousEvents,
+      videos,
+      tests,
+      draftCourses,
+      publishedCourses,
+      recentUsers,
+      recentContent,
+      recentActivity,
+      courseStarts,
+      testsCompleted,
     ]) => ({
       users,
       activeUsers,
@@ -102,6 +147,15 @@ export class CatalogAdminService {
       expiringIn7Days,
       newQuestions,
       suspiciousEvents,
+      videos,
+      tests,
+      draftCourses,
+      publishedCourses,
+      recentUsers,
+      recentContent,
+      recentActivity,
+      courseStarts,
+      testsCompleted,
     }));
   }
 
@@ -196,6 +250,11 @@ export class CatalogAdminService {
         instructor: dto.instructor,
         language: dto.language ?? Language.ru,
         status: dto.status ?? PublishStatus.draft,
+        level: dto.level,
+        durationMin: dto.durationMin,
+        publishedAt: dto.status === PublishStatus.published ? new Date() : null,
+        createdBy: adminId,
+        updatedBy: adminId,
         translations: { create: dto.translations.map(toCourseTranslation) },
         prices: { create: prices },
       },
@@ -221,6 +280,10 @@ export class CatalogAdminService {
         instructor: dto.instructor,
         language: dto.language,
         status: dto.status,
+        level: dto.level,
+        durationMin: dto.durationMin,
+        updatedBy: adminId,
+        ...(dto.status === PublishStatus.published ? { publishedAt: new Date() } : {}),
         ...(dto.translations
           ? {
               translations: {
@@ -318,6 +381,9 @@ export class CatalogAdminService {
         status: dto.status ?? PublishStatus.published,
         isFreePreview: dto.isFreePreview ?? false,
         durationSec: dto.durationSec,
+        createdBy: adminId,
+        updatedBy: adminId,
+        publishedAt: (dto.status ?? PublishStatus.published) === PublishStatus.published ? new Date() : null,
         translations: { create: dto.translations.map(toLessonTranslation) },
       },
       include: { translations: true },
@@ -391,6 +457,148 @@ export class CatalogAdminService {
     return this.listTimecodes(lessonId);
   }
 
+  async archiveCourse(adminId: string, id: string, ip?: string) {
+    const course = await this.prisma.course.update({
+      where: { id },
+      data: { status: PublishStatus.archived, updatedBy: adminId },
+      include: courseInclude,
+    });
+    await this.audit.log({ adminId, action: 'archive', entity: 'course', entityId: id, ip });
+    return course;
+  }
+
+  async deleteCourse(adminId: string, id: string, ip?: string) {
+    const entitlements = await this.prisma.entitlement.count({ where: { courseId: id } });
+    if (entitlements > 0) {
+      return this.archiveCourse(adminId, id, ip);
+    }
+    await this.prisma.course.delete({ where: { id } });
+    await this.audit.log({ adminId, action: 'delete', entity: 'course', entityId: id, ip });
+    return { id, deleted: true };
+  }
+
+  async reorderSections(adminId: string, courseId: string, ids: string[], ip?: string) {
+    await this.prisma.course.findUniqueOrThrow({ where: { id: courseId } });
+    await this.prisma.$transaction(
+      ids.map((id, index) =>
+        this.prisma.section.update({ where: { id }, data: { sortOrder: index } }),
+      ),
+    );
+    await this.audit.log({ adminId, action: 'reorder', entity: 'section', entityId: courseId, ip });
+    return this.getCourse(courseId);
+  }
+
+  async reorderLessons(adminId: string, sectionId: string, ids: string[], ip?: string) {
+    await this.prisma.section.findUniqueOrThrow({ where: { id: sectionId } });
+    await this.prisma.$transaction(
+      ids.map((id, index) =>
+        this.prisma.lesson.update({ where: { id }, data: { sortOrder: index, updatedBy: adminId } }),
+      ),
+    );
+    await this.audit.log({ adminId, action: 'reorder', entity: 'lesson', entityId: sectionId, ip });
+    return { ok: true };
+  }
+
+  listTopics() {
+    return this.prisma.section.findMany({
+      include: {
+        translations: true,
+        course: { include: { translations: true } },
+        _count: { select: { lessons: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
+  listVideos() {
+    return this.prisma.video.findMany({
+      include: {
+        lesson: {
+          include: {
+            translations: true,
+            section: { include: { course: { include: { translations: true } } } },
+          },
+        },
+        variants: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+    }).then((rows) =>
+      rows.map((video) => ({
+        id: video.id,
+        title: video.title ?? video.originalName,
+        status: video.status,
+        durationSec: video.durationSec,
+        language: video.language,
+        externalUrl: video.externalUrl,
+        thumbnailUrl: video.thumbnailUrl,
+        lessonId: video.lessonId,
+        lesson: video.lesson,
+        variants: video.variants.map((variant) => ({ quality: variant.quality, protocol: variant.protocol })),
+      })),
+    );
+  }
+
+  async search(query: string) {
+    const q = query.trim();
+    if (q.length < 2) {
+      return { courses: [], lessons: [], videos: [], tests: [], clinicalCases: [], users: [] };
+    }
+    const [courses, lessons, videos, tests, clinicalCases, users] = await Promise.all([
+      this.prisma.course.findMany({
+        where: { translations: { some: { title: { contains: q, mode: 'insensitive' } } } },
+        include: { translations: true },
+        take: 8,
+      }),
+      this.prisma.lesson.findMany({
+        where: { translations: { some: { title: { contains: q, mode: 'insensitive' } } } },
+        include: { translations: true, section: { include: { course: { include: { translations: true } } } } },
+        take: 8,
+      }),
+      this.prisma.video.findMany({
+        where: {
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { originalName: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        take: 8,
+      }),
+      this.prisma.test.findMany({
+        where: { title: { contains: q, mode: 'insensitive' } },
+        take: 8,
+      }),
+      this.prisma.clinicalCase.findMany({
+        where: { title: { contains: q, mode: 'insensitive' } },
+        take: 8,
+      }),
+      this.prisma.user.findMany({
+        where: {
+          status: { not: 'deleted' },
+          OR: [
+            { email: { contains: q, mode: 'insensitive' } },
+            { phone: { contains: q } },
+            { profile: { OR: [
+              { firstName: { contains: q, mode: 'insensitive' } },
+              { lastName: { contains: q, mode: 'insensitive' } },
+              { displayName: { contains: q, mode: 'insensitive' } },
+            ] } },
+          ],
+        },
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          createdAt: true,
+          lastLoginAt: true,
+          profile: { select: { firstName: true, lastName: true, displayName: true, appRole: true } },
+        },
+        take: 8,
+      }),
+    ]);
+    return { courses, lessons, videos, tests, clinicalCases, users };
+  }
+
   async updateLesson(adminId: string, id: string, dto: UpdateLessonDto, ip?: string) {
     const current = await this.prisma.lesson.findUniqueOrThrow({ where: { id } });
     if (dto.isFreePreview && !current.isFreePreview) {
@@ -404,6 +612,8 @@ export class CatalogAdminService {
         status: dto.status,
         isFreePreview: dto.isFreePreview,
         durationSec: dto.durationSec,
+        updatedBy: adminId,
+        ...(dto.status === PublishStatus.published ? { publishedAt: new Date() } : {}),
       },
       include: { translations: true },
     });

@@ -50,7 +50,7 @@ export default function LearnCoursePage() {
 
   return (
     <Shell>
-      <a href="/#year3">{t('nav.courses')}</a>
+      <a href="/courses">{t('nav.courses')}</a>
       <section className="hero">
         <h1>{title}</h1>
       </section>

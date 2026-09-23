@@ -15,7 +15,7 @@ const PUBLIC_USER = {
   phoneVerified: true,
   createdAt: true,
   lastLoginAt: true,
-  profile: { select: { displayName: true, firstName: true, lastName: true } },
+  profile: { select: { displayName: true, firstName: true, lastName: true, appRole: true } },
 } as const;
 
 @Injectable()
@@ -91,6 +91,7 @@ export class UsersAdminService {
         displayName: user.profile?.displayName ?? null,
         firstName: user.profile?.firstName ?? null,
         lastName: user.profile?.lastName ?? null,
+        role: user.profile?.appRole ?? 'student',
         activeEntitlements: user._count.entitlements,
         activeDevices: user._count.devices,
         paidOrders: user._count.orders,
@@ -143,9 +144,50 @@ export class UsersAdminService {
       displayName: user.profile?.displayName ?? null,
       firstName: user.profile?.firstName ?? null,
       lastName: user.profile?.lastName ?? null,
+      role: user.profile?.appRole ?? 'student',
       entitlements: user.entitlements,
       devices: user.devices,
       attempts: user.testAttempts,
+    };
+  }
+
+  listStaff() {
+    return this.prisma.adminAccount.findMany({
+      select: { id: true, email: true, isActive: true, createdAt: true, updatedAt: true },
+      orderBy: { createdAt: 'asc' },
+    }).then((items) => items.map((item) => ({ ...item, role: 'admin' })));
+  }
+
+  async updateProfile(
+    adminId: string,
+    id: string,
+    data: { firstName?: string; lastName?: string; appRole?: string },
+    ip?: string,
+  ) {
+    if (data.appRole && !['student', 'doctor', 'admin'].includes(data.appRole)) {
+      throw new AppException('USER_STATUS_INVALID', 'Role is not allowed');
+    }
+    await this.prisma.user.findUniqueOrThrow({ where: { id } });
+    const profile = await this.prisma.userProfile.upsert({
+      where: { userId: id },
+      create: {
+        userId: id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        appRole: data.appRole ?? 'student',
+      },
+      update: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        appRole: data.appRole,
+      },
+    });
+    await this.audit.log({ adminId, action: 'update', entity: 'user_profile', entityId: id, ip });
+    return {
+      id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      role: profile.appRole,
     };
   }
 

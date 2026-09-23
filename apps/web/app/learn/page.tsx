@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 export default function LearnPage() {
   useEffect(() => {
-    window.location.replace('/#year3');
+    window.location.replace('/courses');
   }, []);
   return null;
 }
